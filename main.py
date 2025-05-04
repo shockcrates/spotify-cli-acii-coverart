@@ -17,10 +17,23 @@ def request_artist_data():
         return 
     print(f"Name: {x.json()["name"]}")
 
+def request_user_data(): #does not work with client credentials, would need to use Authorization Code which requires setting up a HTTP server to get response
+    access_token = get_token()
+    base_url = "https://api.spotify.com/v1/me"
+    header = {"Authorization": f"Bearer {access_token}"}
+
+    x = requests.get(url=base_url)
+    if x.ok != True:
+        print("THINGS ARE NOT OK")
+        print(f"{x.json()["error"]["message"]}")
+        return 
+    print(f"Name: {x.json()["id"]}")
+
 
 def main():
     #request_access_token()
     request_artist_data()
+    
 
 
 if __name__ == "__main__":

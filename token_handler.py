@@ -46,7 +46,7 @@ def is_valid_token():
 
 def get_saved_token():
     with open(TOKEN_FILE) as openf:
-        Token = json.load(openf)["access_data"]
+        Token = json.load(openf)["access_token"]
     return Token
 
 
@@ -65,4 +65,4 @@ def get_token():
             save_token(token)
             return token
     except ValueError:
-        print("No Luch. Try again")
+        print("No Luck. Try again")
