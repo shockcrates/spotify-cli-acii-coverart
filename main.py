@@ -1,8 +1,8 @@
 import requests
 import os
 import base64
-from token_handler import get_token
-
+#from token_handler import get_token
+from PKCE_token_handler import get_token
 
 def request_artist_data():
     access_token = get_token()

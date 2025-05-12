@@ -22,8 +22,8 @@ import urllib.parse
 load_dotenv()
 client_id = os.getenv("SPOTIFY_CLIENT_ID")
 client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
-REDIRECT_URI = "https://localhost:3000/callback"
-AUTH_URL = "https://accounts.spotify.com/api/authorize"
+REDIRECT_URI = "http://127.0.0.1:8080/callback" #maybe change to http, also in app on website
+AUTH_URL = "https://accounts.spotify.com/authorize"
 TOKEN_URL= "https://accounts.spotify.com/api/token"
 scope = "user-read-private user-top-read"
 TOKEN_FILE = "token.json"
@@ -31,13 +31,13 @@ TIME_LIMIT_SEC = 3600
 
 def generate_random_string(size):
     available = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-~"
-    indexes = [random.randint(0,len(available)) for _ in range(size)]
-    rand_string = "".join([available[indexes[i]]] for i in range[size])
+    indexes = [random.randint(0,len(available)-1) for _ in range(size)]
+    rand_string = "".join([available[indexes[i]] for i in range(size)])
     return rand_string
 
 def generate_pkce_pair(size):
     rand_string = generate_random_string(size)
-    code_verfier = base64.urlsafe_b64encode(rand_string).decode('utf-8').rstrip("=")
+    code_verfier = base64.urlsafe_b64encode(rand_string.encode()).decode('utf-8').rstrip("=")
     challenge_bytes = hashlib.sha256(code_verfier.encode()).digest()
     code_challenge = base64.urlsafe_b64encode(challenge_bytes).decode('utf-8').rstrip("=")
     return code_verfier, code_challenge
@@ -54,15 +54,16 @@ class AuthHandler(BaseHTTPRequestHandler):
             self.send_response("200")
             self.end_headers()
             self.wfile.write("<h1>Auth done. Geeeeeeet out of here.</h1")
+
         else:
-            self.send_error("404")
+            self.send_error(404)
 
 
 def start_server():
-    server = HTTPServer(REDIRECT_URI, AuthHandler)
-    thread = threading.Thread(target=server.handle_request)
+    server = HTTPServer(("localhost",8080), AuthHandler)
+    thread = threading.Thread(target=server.serve_forever)
     thread.start()
-    #return server
+    return server
 
 def get_access_token():
     code_verifier, code_challenge = generate_pkce_pair(64)
@@ -77,35 +78,50 @@ def get_access_token():
 
     authentication_request_url = f"{AUTH_URL}?{urllib.parse.urlencode(data)}"
 
-    start_server()
+    try:
+        server = start_server()
 
-    webbrowser.open(authentication_request_url)
+        print("Opening Browser to spotify for login")
+        webbrowser.open(authentication_request_url)
 
-    #wait for redirect and data read to happen
+        #wait for redirect and data read to happen
 
-    while(AuthHandler.auth_code == None):
-        pass
+        timeout_limit = 120
+        start_time = time.time()
+        while(AuthHandler.auth_code == None):
+            if time.time() - start_time > timeout_limit:
+                print("Timed out")
+                break
+            time.sleep(0.1)
+            
 
-    print("Authentication code received")
-
-    data2 = {
-        "grant_type": "authorization_code",
-        "code": AuthHandler.auth_code,
-        "redirect_uri": REDIRECT_URI,
-        "client_id": client_id,
-        "code_verifier": code_verifier
-    }
-    header = {
-        "Conetent-Type": "application/x-www-form-urlencoded"
-    }
-
-    answer = post(url=TOKEN_URL, headers=header, data=data2)
-
-    if answer.ok != True:
-        print("POST has failed")
-        raise ValueError
+        print(f"Authentication code received: {AuthHandler.auth_code}")
     
-    return answer.json()["access_token"], answer.json()
+        
+
+        data2 = {
+            "grant_type": "authorization_code",
+            "code": AuthHandler.auth_code,
+            "redirect_uri": REDIRECT_URI,
+            "client_id": client_id,
+            "code_verifier": code_verifier
+        }
+        header = {
+            "Conetent-Type": "application/x-www-form-urlencoded"
+        }
+
+        answer = post(url=TOKEN_URL, headers=header, data=data2)
+
+        if answer.ok != True:
+            print("POST has failed")
+            raise ValueError
+        else:
+            print("Successfully got access token!!")
+        
+        return answer.json()["access_token"], answer.json()
+    finally:
+        print("Shutting down server")
+        server.shutdown()
 
 
 def is_valid_token():
