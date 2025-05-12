@@ -25,7 +25,7 @@ client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "http://127.0.0.1:8080/callback" #maybe change to http, also in app on website
 AUTH_URL = "https://accounts.spotify.com/authorize"
 TOKEN_URL= "https://accounts.spotify.com/api/token"
-scope = "user-read-private user-top-read"
+scope = "user-read-private user-top-read user-read-email playlist-read-private playlist-read-collaborative"
 TOKEN_FILE = "token.json"
 TIME_LIMIT_SEC = 3600
 
